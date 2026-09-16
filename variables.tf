@@ -44,3 +44,15 @@ variable "private_subnet_address_prefixes" {
   type        = list(string)
   default     = ["10.10.2.0/24"]
 }
+
+variable "app_nsg_name" {
+  description = "Name of the application subnet NSG"
+  type        = string
+  default     = "nsg-app"
+}
+
+variable "private_nsg_name" {
+  description = "Name of the private subnet NSG"
+  type        = string
+  default     = "nsg-private"
+}
