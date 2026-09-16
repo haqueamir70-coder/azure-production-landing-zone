@@ -84,3 +84,10 @@ resource "azurerm_key_vault" "landing_zone" {
   soft_delete_retention_days = 7
   purge_protection_enabled   = false
 }
+
+resource "azurerm_user_assigned_identity" "landing_zone" {
+  name                = var.managed_identity_name
+  location            = var.location
+  resource_group_name = azurerm_resource_group.landing_zone.name
+}
+

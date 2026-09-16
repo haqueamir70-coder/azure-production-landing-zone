@@ -63,3 +63,9 @@ variable "key_vault_name" {
   type        = string
   default     = "kv-amirul-lz-dev-2026"
 }
+
+variable "managed_identity_name" {
+  description = "Name of the User Assigned Managed Identity"
+  type        = string
+  default     = "id-landingzone-dev"
+}
