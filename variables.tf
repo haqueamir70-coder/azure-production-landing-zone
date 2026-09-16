@@ -56,3 +56,10 @@ variable "private_nsg_name" {
   type        = string
   default     = "nsg-private"
 }
+
+
+variable "key_vault_name" {
+  description = "Name of the Azure Key Vault"
+  type        = string
+  default     = "kv-amirul-lz-dev-2026"
+}

@@ -1,3 +1,4 @@
+data "azurerm_client_config" "current" {}
 resource "azurerm_resource_group" "landing_zone" {
   name     = var.resource_group_name
   location = var.location
@@ -72,4 +73,14 @@ resource "azurerm_network_security_rule" "private_deny_internet_inbound" {
   destination_address_prefix  = "*"
   resource_group_name         = azurerm_resource_group.landing_zone.name
   network_security_group_name = azurerm_network_security_group.private.name
+}
+resource "azurerm_key_vault" "landing_zone" {
+  name                       = var.key_vault_name
+  location                   = var.location
+  resource_group_name        = azurerm_resource_group.landing_zone.name
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  rbac_authorization_enabled = true
+  soft_delete_retention_days = 7
+  purge_protection_enabled   = false
 }
