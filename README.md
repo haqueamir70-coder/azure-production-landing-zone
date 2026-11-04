@@ -1,133 +1,75 @@
-<div align="center">
+# Azure Production Landing Zone — Terraform Foundation
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0B1F3A,50:0078D4,100:14B8A6&height=190&section=header&text=Azure+Production+Landing+Zone&fontSize=34&fontColor=ffffff&animation=fadeIn" alt="Azure landing zone architecture banner" width="100%" />
+> **Status:** Terraform foundation reference with CI formatting/validation. The code is not represented as deployed infrastructure. Review the Terraform plan and security posture before applying to any subscription.
 
-<img src="https://readme-typing-svg.demolab.com/?font=Fira+Code&weight=600&size=17&pause=1200&color=00C7FF&center=true&vCenter=true&width=900&height=40&lines=Terraform+%E2%80%A2+Network+Segmentation+%E2%80%A2+Identity+%E2%80%A2+Governance" alt="Animated project tagline" />
+## What this project builds
 
-[![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
-[![Azure](https://img.shields.io/badge/Microsoft-Azure-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
-[![Portfolio](https://img.shields.io/badge/Portfolio-MD%20Amirul-181717?style=for-the-badge&logo=github)](https://github.com/haqueamir70-coder)
+- Resource group and segmented virtual network.
+- Application and private-endpoint subnets.
+- Separate NSGs with subnet associations.
+- Private-only Azure Key Vault using RBAC authorization.
+- Key Vault Private Endpoint and Private DNS integration.
+- User-assigned managed identity.
+- Terraform outputs for downstream modules and pipelines.
 
-</div>
+## Network and security design
 
-> **Portfolio project:** implementation status and limitations are documented below. The diagram describes the intended workflow/architecture and is not proof of a successful production deployment.
+The application subnet does **not** allow direct Internet ingress. Its sample HTTPS rule allows traffic only from the VNet. Add an approved Application Gateway, Front Door or other ingress tier with narrowly scoped source ranges when a workload requires external access.
 
-## 🗺️ Architecture at a Glance
+The Key Vault has public network access disabled, default-deny network ACLs, a private endpoint, private DNS integration, 90-day soft delete and purge protection. A client must have both a private network route/DNS resolution and an authorized Microsoft Entra identity. The managed identity is created as a foundation component; workload role assignments should be scoped to the actual consuming application and are not granted broadly by this project.
+
+## Architecture
 
 ```mermaid
-flowchart TD
-  A[Azure Subscription] --> B[Resource Group]
-  B --> C[Virtual Network]
-  C --> D[Application Subnet + NSG]
-  C --> E[Private Subnet + NSG]
-  B --> F[Key Vault / Identity]
-  B --> G[Monitoring and Policy]
-```
-
----
-
-# Azure Production Landing Zone (Terraform)
-
-A portfolio project for building a repeatable Azure infrastructure foundation with Terraform. This repository is intended to demonstrate Infrastructure as Code structure, network segmentation, and security-conscious configuration. Review the current code and validate it in a non-production subscription before using it for real workloads.
-
-## Implemented in the current Terraform configuration
-
-- Azure Resource Group
-- Azure Virtual Network with configurable address space
-- Application and private subnets
-- Separate Network Security Groups for the subnets
-- Subnet-to-NSG associations
-- An inbound HTTPS rule for the application NSG
-- An inbound Internet-deny rule for the private NSG
-- Azure Key Vault configured for RBAC authorization
-- User-assigned managed identity
-
-The exact resources and defaults are defined in `main.tf`, `provider.tf`, and `variables.tf`. Confirm the current repository state before relying on this summary.
-
-## Technology stack
-
-- Microsoft Azure
-- Terraform
-- HashiCorp AzureRM provider
-- Git and GitHub
-
-## Repository structure
-
-```text
-.
-├── main.tf
-├── provider.tf
-├── variables.tf
-├── terraform.tfvars.example
-├── .terraform.lock.hcl
-├── .gitignore
-└── README.md
+flowchart TB
+  Engineer[Engineer / CI identity] --> Azure[Azure subscription]
+  subgraph VNet[Landing zone VNet]
+    App[Application subnet]
+    PE[Private endpoint subnet]
+    DNS[Private DNS zone]
+    App --> DNS --> PE
+  end
+  Azure --> VNet
+  PE --> KV[Private Azure Key Vault]
+  MI[User-assigned managed identity] -. least-privilege RBAC assignment .-> KV
 ```
 
 ## Prerequisites
 
-1. An Azure subscription and permission to create the resources in this configuration.
-2. Terraform installed locally.
-3. Azure CLI installed and authenticated, or another supported Azure authentication method.
-4. A unique Key Vault name that meets Azure naming requirements.
-5. A non-production subscription for testing.
+- Terraform CLI 1.6+
+- Azure CLI authenticated to the intended test subscription
+- Permissions to create networking, Key Vault, private endpoint, DNS link and managed identity resources
+- A globally unique Key Vault name (3–24 characters)
 
-## Authenticate to Azure
-
-For local development, use the Azure CLI:
+## Validate and deploy
 
 ```bash
-az login
-az account show
-az account set --subscription "<SUBSCRIPTION_ID>"
-```
-
-Do not commit client secrets, access tokens, state files, or real `terraform.tfvars` values. For CI/CD, prefer workload identity federation/OIDC or managed identity where available, with narrowly scoped permissions.
-
-## Configure and validate
-
-Review the variables and copy the example file if needed:
-
-```bash
-cp terraform.tfvars.example terraform.tfvars
-terraform init
 terraform fmt -check -recursive
+terraform init -backend=false
 terraform validate
-terraform plan
+terraform plan -out=tfplan
+terraform show -no-color tfplan
 ```
 
-Inspect the plan carefully before applying. Apply only when you understand the proposed changes and have selected the intended subscription:
+Apply only after reviewing the complete plan, subscription, region, address ranges, naming availability and expected costs:
 
 ```bash
-terraform apply
+terraform apply tfplan
 ```
 
-Clean up test resources when finished, after confirming that deletion will not affect anything you need:
+Use remote state with access controls and locking for team use. Never commit state, plan files, credentials or real `terraform.tfvars`.
 
-```bash
-terraform plan -destroy
-terraform destroy
-```
+## Operational checks after deployment
 
-## Security and production-readiness notes
+1. Confirm the Key Vault private endpoint connection is approved.
+2. Resolve `<vault-name>.vault.azure.net` from a client in the linked VNet and verify private-link resolution.
+3. Confirm the client has the intended Key Vault RBAC role; network reachability does not grant data access.
+4. Test secret access from a private workload identity.
+5. Verify diagnostic logging, alert routing and recovery ownership before production use.
 
-This is a **portfolio/reference implementation, not a claim of a fully production-certified landing zone**. Before production use, review and test at least the following:
+## CI
 
-- Enable Key Vault purge protection and choose an appropriate soft-delete retention policy.
-- Validate NSG rules against the actual threat model; avoid broad Internet access unless explicitly required.
-- Add explicit Key Vault network controls, diagnostic settings, logging, alerting, and retention.
-- Define RBAC assignments for the managed identity and validate least privilege.
-- Use a remote Terraform backend with locking, access controls, and protected state.
-- Add automated formatting, validation, security scanning, plan review, and protected apply approvals.
-- Test naming, region availability, quotas, policy requirements, and cost in the target subscription.
-
-## Roadmap
-
-- Add CI checks for `terraform fmt`, `terraform validate`, and infrastructure security scanning.
-- Add a documented remote state backend pattern.
-- Add monitoring and diagnostic settings.
-- Add environment separation and reusable modules where justified.
-- Publish validation evidence and an architecture diagram.
+GitHub Actions runs Terraform formatting, backend-free initialization and validation. This validates configuration syntax; it does not prove subscription permissions, resource availability, private DNS operation or a live deployment.
 
 ## Author
 
