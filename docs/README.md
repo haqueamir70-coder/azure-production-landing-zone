@@ -76,3 +76,7 @@ Use policy initiatives for allowed locations/SKUs, mandatory tags and diagnostic
 ### 10. Answer
 
 Show deployed resource IDs, policy assignments, identity setup, network/DNS tests, diagnostic ingestion and operational runbooks. Terraform validate alone is not proof.
+
+## Complete zero-to-hero guide
+
+See [ZERO-TO-HERO.md](./ZERO-TO-HERO.md) for the business scenario, architecture walkthrough, tool-by-tool explanations, implementation sequence, practical commands, troubleshooting playbook and additional scenario-based interview questions with answers.
