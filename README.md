@@ -69,7 +69,7 @@ Use remote state with access controls and locking for team use. Never commit sta
 
 ## CI
 
-GitHub Actions runs Terraform formatting, backend-free initialization and validation. This validates configuration syntax; it does not prove subscription permissions, resource availability, private DNS operation or a live deployment.
+GitHub Actions runs Terraform formatting, backend-free initialization and validation plus an advisory Checkov scan. Triage scanner findings before treating this as a blocking production security gate. CI validates configuration syntax; it does not prove subscription permissions, resource availability, private DNS operation or a live deployment.
 
 ## Author
 
