@@ -59,9 +59,14 @@ variable "private_nsg_name" {
 
 
 variable "key_vault_name" {
-  description = "Name of the Azure Key Vault"
+  description = "Globally unique Azure Key Vault name (3-24 characters)."
   type        = string
   default     = "kv-amirul-lz-dev-2026"
+
+  validation {
+    condition     = length(var.key_vault_name) >= 3 && length(var.key_vault_name) <= 24 && can(regex("^[A-Za-z0-9-]+$", var.key_vault_name))
+    error_message = "key_vault_name must be 3-24 characters and contain only letters, numbers, or hyphens."
+  }
 }
 
 variable "managed_identity_name" {
