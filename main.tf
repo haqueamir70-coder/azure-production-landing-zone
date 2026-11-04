@@ -103,10 +103,10 @@ resource "azurerm_private_dns_zone" "key_vault" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "key_vault" {
-  name                  = "key-vault-private-dns-link"
-  private_dns_zone_id   = azurerm_private_dns_zone.key_vault.id
-  virtual_network_id    = azurerm_virtual_network.landing_zone.id
-  registration_enabled  = false
+  name                 = "key-vault-private-dns-link"
+  private_dns_zone_id  = azurerm_private_dns_zone.key_vault.id
+  virtual_network_id   = azurerm_virtual_network.landing_zone.id
+  registration_enabled = false
 }
 
 resource "azurerm_private_endpoint" "key_vault" {
