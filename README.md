@@ -1,93 +1,124 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0B1F3A,50:0078D4,100:14B8A6&height=190&section=header&text=Azure+Production+Landing+Zone&fontSize=32&fontColor=ffffff&animation=fadeIn" alt="Azure Production Landing Zone project banner" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:061B33,45:075985,100:14B8A6&height=225&section=header&text=Azure%20Landing%20Zone%20Foundation&fontSize=34&fontColor=ffffff&animation=fadeIn" width="100%" alt="Azure Production Landing Zone"/>
 
-<img src="https://readme-typing-svg.demolab.com/?font=Inter&weight=600&size=16&pause=1600&color=38BDF8&center=true&vCenter=true&width=900&height=36&lines=Azure+Production+Landing+Zone+%E2%80%A2+Architecture+%E2%80%A2+Automation+%E2%80%A2+Security" alt="Animated project focus line" />
+### Network segmentation · Private platform services · Identity-first access
 
-![Azure](https://img.shields.io/badge/Cloud+Foundation-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white) ![Terraform](https://img.shields.io/badge/Infrastructure+as+Code-844FBA?style=for-the-badge&logo=terraform&logoColor=white) ![Security](https://img.shields.io/badge/Private+by+Design-0F766E?style=for-the-badge)
+[![Azure](https://img.shields.io/badge/Microsoft_Azure-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
+[![Terraform](https://img.shields.io/badge/Terraform-844FBA?style=for-the-badge&logo=terraform&logoColor=white)](https://developer.hashicorp.com/terraform)
+[![Private networking](https://img.shields.io/badge/Networking-Private_by_Design-0F766E?style=for-the-badge)](https://learn.microsoft.com/azure/private-link/)
+
+**A Terraform foundation for an Azure workload landing zone, combining segmented subnets, network security groups, private Key Vault access and managed identity building blocks.**
+
+[Architecture](#-architecture) · [Security controls](#-security-controls) · [Quick start](#-validate-and-plan) · [Operations](#-post-deployment-validation)
 
 </div>
 
----
+> [!IMPORTANT]
+> The repository is a Terraform foundation reference with CI formatting/validation. It is **not** represented as deployed infrastructure. Review the target subscription, plan, security controls and cost before applying.
 
-# Azure Production Landing Zone — Terraform Foundation
+## What this foundation is designed to solve
 
-> **Status:** Terraform foundation reference with CI formatting/validation. The code is not represented as deployed infrastructure. Review the Terraform plan and security posture before applying to any subscription.
-
-## What this project builds
-
-- Resource group and segmented virtual network.
-- Application and private-endpoint subnets.
-- Separate NSGs with subnet associations.
-- Private-only Azure Key Vault using RBAC authorization.
-- Key Vault Private Endpoint and Private DNS integration.
-- User-assigned managed identity.
-- Terraform outputs for downstream modules and pipelines.
-
-## Network and security design
-
-The application subnet does **not** allow direct Internet ingress. Its sample HTTPS rule allows traffic only from the VNet. Add an approved Application Gateway, Front Door or other ingress tier with narrowly scoped source ranges when a workload requires external access.
-
-The Key Vault has public network access disabled, default-deny network ACLs, a private endpoint, private DNS integration, 90-day soft delete and purge protection. A client must have both a private network route/DNS resolution and an authorized Microsoft Entra identity. The managed identity is created as a foundation component; workload role assignments should be scoped to the actual consuming application and are not granted broadly by this project.
+Workloads need predictable network boundaries and controlled access to platform services. This lab demonstrates a small landing-zone slice where application traffic, private endpoints, DNS and workload identity are modelled explicitly instead of relying on public service endpoints.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  Engineer[Engineer / CI identity] --> Azure[Azure subscription]
-  subgraph VNet[Landing zone VNet]
+  Operator[Platform engineer / CI identity] --> Sub[Azure subscription]
+  subgraph VNet[Landing zone virtual network]
     App[Application subnet]
     PE[Private endpoint subnet]
     DNS[Private DNS zone]
-    App --> DNS --> PE
+    App --> DNS
+    DNS --> PE
   end
-  Azure --> VNet
+  Sub --> VNet
   PE --> KV[Private Azure Key Vault]
-  MI[User-assigned managed identity] -. least-privilege RBAC assignment .-> KV
+  MI[User-assigned managed identity] -. least-privilege RBAC .-> KV
 ```
 
-## Prerequisites
+## Foundation components
 
-- Terraform CLI 1.6+
-- Azure CLI authenticated to the intended test subscription
-- Permissions to create networking, Key Vault, private endpoint, DNS link and managed identity resources
-- A globally unique Key Vault name (3–24 characters)
+| Component | Design |
+|---|---|
+| Resource group | Workload boundary and tagging foundation |
+| Virtual network | Segmented address space |
+| Application subnet | Workload network zone; no direct Internet ingress rule |
+| Private endpoint subnet | Private Link attachment point |
+| Network security groups | Separate subnet-level controls |
+| Azure Key Vault | RBAC authorization, private access, soft delete and purge protection |
+| Private DNS | Private-link name resolution |
+| User-assigned identity | Reusable workload identity building block |
 
-## Validate and deploy
+## Security controls
+
+- Application subnet sample HTTPS access is scoped to the VNet service tag; it is not a public ingress path.
+- Key Vault public network access is disabled and network ACLs default to deny.
+- Key Vault uses RBAC authorization, 90-day soft delete and purge protection.
+- Private Endpoint and Private DNS integration are included in the design.
+- Managed identity creation does not imply broad data-plane permissions. Assign workload roles narrowly and deliberately.
+- Network reachability and identity authorization must both succeed for a workload to retrieve a secret.
+
+## Validate and plan
+
+### Prerequisites
+
+- Terraform CLI 1.6+.
+- Azure CLI authenticated to the intended non-production subscription.
+- Permissions for resource groups, networking, Key Vault, Private Endpoint, DNS and managed identity resources.
+- A globally unique Key Vault name; check the actual Azure naming constraints for the selected resource.
+
+### Static validation
 
 ```bash
 terraform fmt -check -recursive
 terraform init -backend=false
 terraform validate
+```
+
+### Review the plan
+
+```bash
 terraform plan -out=tfplan
 terraform show -no-color tfplan
 ```
 
-Apply only after reviewing the complete plan, subscription, region, address ranges, naming availability and expected costs:
+Apply only after checking subscription, region, CIDRs, name availability, role assignments, resource SKUs and estimated cost. Use a secured remote backend with locking for shared work. Never commit state, plan files, credentials or real `terraform.tfvars`.
 
-```bash
-terraform apply tfplan
-```
+## Post-deployment validation
 
-Use remote state with access controls and locking for team use. Never commit state, plan files, credentials or real `terraform.tfvars`.
+If you deploy this foundation in a test subscription, verify each layer independently:
 
-## Operational checks after deployment
+1. Confirm the VNet and subnet address ranges do not overlap with connected networks.
+2. Confirm NSGs are associated with the intended subnets and inspect effective security rules.
+3. Confirm the Key Vault Private Endpoint connection is approved.
+4. Resolve the vault hostname from a client in the linked VNet and verify private DNS returns the expected private address.
+5. Confirm the workload identity has only the required Key Vault data-plane role.
+6. Test secret retrieval from the intended private workload path.
+7. Enable diagnostics and verify logs reach the chosen monitoring destination.
 
-1. Confirm the Key Vault private endpoint connection is approved.
-2. Resolve `<vault-name>.vault.azure.net` from a client in the linked VNet and verify private-link resolution.
-3. Confirm the client has the intended Key Vault RBAC role; network reachability does not grant data access.
-4. Test secret access from a private workload identity.
-5. Verify diagnostic logging, alert routing and recovery ownership before production use.
+## CI and evidence
 
-## CI
+GitHub Actions runs formatting, backend-free initialization and Terraform validation plus an advisory Checkov scan. CI validates configuration, not the live subscription, endpoint approval, DNS resolution or application access. Use the repository [Actions page](../../actions) to inspect current runs.
 
-GitHub Actions runs Terraform formatting, backend-free initialization and validation plus an advisory Checkov scan. Triage scanner findings before treating this as a blocking production security gate. CI validates configuration syntax; it does not prove subscription permissions, resource availability, private DNS operation or a live deployment.
+## Next steps
 
-## Author
+- [ ] Add explicit environment/subscription boundaries and policy assignments.
+- [ ] Add a documented hub/spoke or approved ingress design where required.
+- [ ] Add workload-specific RBAC role assignments.
+- [ ] Add diagnostics, alerting and operational ownership.
+- [ ] Run a controlled deployment and attach genuine validation evidence.
+- [ ] Add cost estimates and a teardown procedure.
 
-MD Amirul Haque · [GitHub profile](https://github.com/haqueamir70-coder) · [LinkedIn](https://www.linkedin.com/in/md-amirul-haque/)
+## Documentation
 
+- [Architecture and interview guide](docs/README.md)
+- [Zero-to-hero implementation guide](docs/ZERO-TO-HERO.md)
+- [Advanced interview bank](docs/ADVANCED-INTERVIEW-BANK.md)
 
-## Architecture and interview preparation
+## Maintainer
 
-See the [architecture diagram and interview questions](docs/README.md) for the repository-specific design walkthrough and technical interview guide.
+**MD Amirul Haque** · [GitHub](https://github.com/haqueamir70-coder) · [LinkedIn](https://www.linkedin.com/in/md-amirul-haque/)
+
+<sub>Establish the boundary first. Then connect identity, network and operations.</sub>
