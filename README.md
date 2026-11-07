@@ -1,3 +1,15 @@
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0B1F3A,50:0078D4,100:14B8A6&height=190&section=header&text=Azure+Production+Landing+Zone&fontSize=32&fontColor=ffffff&animation=fadeIn" alt="Azure Production Landing Zone project banner" width="100%" />
+
+<img src="https://readme-typing-svg.demolab.com/?font=Inter&weight=600&size=16&pause=1600&color=38BDF8&center=true&vCenter=true&width=900&height=36&lines=Azure+Production+Landing+Zone+%E2%80%A2+Architecture+%E2%80%A2+Automation+%E2%80%A2+Security" alt="Animated project focus line" />
+
+![Azure](https://img.shields.io/badge/Cloud+Foundation-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white) ![Terraform](https://img.shields.io/badge/Infrastructure+as+Code-844FBA?style=for-the-badge&logo=terraform&logoColor=white) ![Security](https://img.shields.io/badge/Private+by+Design-0F766E?style=for-the-badge)
+
+</div>
+
+---
+
 # Azure Production Landing Zone — Terraform Foundation
 
 > **Status:** Terraform foundation reference with CI formatting/validation. The code is not represented as deployed infrastructure. Review the Terraform plan and security posture before applying to any subscription.
